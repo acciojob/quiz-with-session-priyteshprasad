@@ -33,38 +33,43 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Function to render questions
   function renderQuestions() {
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      const questionElement = document.createElement("div");
-      questionElement.textContent = question.question;
+    questions.forEach((question, index) => {
+      const questionDiv = document.createElement("div");
+      questionDiv.innerHTML = `<p>${question.question}</p>`;
 
       question.choices.forEach(choice => {
         const input = document.createElement("input");
         input.type = "radio";
-        input.name = `question-${i}`;
+        input.name = `question-${index}`;
         input.value = choice;
-        questionElement.appendChild(input);
+
+        // Check if this choice was selected previously
+        const previousChoice = sessionStorage.getItem(`progress-${index}`);
+        if (previousChoice === choice) {
+          input.checked = true;
+        }
 
         const label = document.createElement("label");
         label.textContent = choice;
-        questionElement.appendChild(label);
 
-        questionElement.appendChild(document.createElement("br"));
+        questionDiv.appendChild(input);
+        questionDiv.appendChild(label);
+        questionDiv.appendChild(document.createElement("br"));
       });
 
-      questionsElement.appendChild(questionElement);
-    }
+      questionsElement.appendChild(questionDiv);
+    });
   }
 
   // Function to calculate score
   function calculateScore() {
     let score = 0;
-    for (let i = 0; i < questions.length; i++) {
-      const selectedOption = document.querySelector(`input[name="question-${i}"]:checked`);
-      if (selectedOption && selectedOption.value === questions[i].answer) {
+    questions.forEach((question, index) => {
+      const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+      if (selectedOption && selectedOption.value === question.answer) {
         score++;
       }
-    }
+    });
     return score;
   }
 
@@ -72,31 +77,40 @@ document.addEventListener("DOMContentLoaded", function() {
   submitButton.addEventListener("click", function(event) {
     event.preventDefault(); // Prevent default button behavior
 
-    // Calculate and display the score
+    // Calculate score
     const score = calculateScore();
-    scoreDisplay.textContent = `Your score is ${score} out of ${questions.length}`;
+
+    // Display score
+    scoreDisplay.textContent = `Your score is ${score} out of 5`;
 
     // Save score in local storage
     localStorage.setItem("score", score);
   });
 
-  // Load saved progress from session storage
-  const progress = JSON.parse(sessionStorage.getItem("progress")) || {};
-  Object.keys(progress).forEach(key => {
-    const question = document.querySelector(`input[name="${key}"][value="${progress[key]}"]`);
-    if (question) {
-      question.checked = true;
-    }
-  });
-
-  // Save progress in session storage when an option is selected
+  // Event listener for radio button change
   questionsElement.addEventListener("change", function(event) {
     const selectedOption = event.target.value;
-    const questionIndex = event.target.name.replace("question-", "");
-    progress[`question-${questionIndex}`] = selectedOption;
-    sessionStorage.setItem("progress", JSON.stringify(progress));
+    const questionIndex = event.target.name.split("-")[1];
+    sessionStorage.setItem(`progress-${questionIndex}`, selectedOption);
   });
 
   // Render questions
   renderQuestions();
+
+  // Load saved progress from session storage
+  questions.forEach((question, index) => {
+    const previousChoice = sessionStorage.getItem(`progress-${index}`);
+    if (previousChoice) {
+      const input = document.querySelector(`input[name="question-${index}"][value="${previousChoice}"]`);
+      if (input) {
+        input.checked = true;
+      }
+    }
+  });
+
+  // Load saved score from local storage 
+  const savedScore = localStorage.getItem("score");
+  if (savedScore !== null) {
+    scoreDisplay.textContent = `Your score is ${savedScore} out of 5`;
+  }
 });
